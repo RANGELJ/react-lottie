@@ -34,9 +34,10 @@ export default class Lottie extends React.Component {
   }
 
   componentWillUpdate(nextProps /* , nextState */) {
+    const { eventListeners } = this.props;
     /* Recreate the animation handle if the data is changed */
     if (this.options.animationData !== nextProps.options.animationData) {
-      this.deRegisterEvents(this.props.eventListeners);
+      this.deRegisterEvents(eventListeners);
       this.destroy();
       this.options = { ...this.options, ...nextProps.options };
       this.anim = lottie.loadAnimation(this.options);
@@ -45,9 +46,10 @@ export default class Lottie extends React.Component {
   }
 
   componentDidUpdate() {
-    if (this.props.isStopped) {
+    const { isStopped, segments } = this.props;
+    if (isStopped) {
       this.stop();
-    } else if (this.props.segments) {
+    } else if (segments) {
       this.playSegments();
     } else {
       this.play();
@@ -59,14 +61,16 @@ export default class Lottie extends React.Component {
   }
 
   componentWillUnmount() {
-    this.deRegisterEvents(this.props.eventListeners);
+    const { eventListeners } = this.props;
+    this.deRegisterEvents(eventListeners);
     this.destroy();
     this.options.animationData = null;
     this.anim = null;
   }
 
   setSpeed() {
-    this.anim.setSpeed(this.props.speed);
+    const { speed } = this.props;
+    this.anim.setSpeed(speed);
   }
 
   setDirection() {
