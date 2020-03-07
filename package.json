@@ -1,10 +1,10 @@
 {
-  "name": "react-lottie",
-  "version": "1.2.3",
+  "name": "rangel-react-lottie",
+  "version": "1.0.0",
   "description": "lottie animation view for React",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chenqingspring/react-lottie"
+    "url": "https://github.com/RANGELJ/react-lottie"
   },
   "license": "MIT",
   "scripts": {
