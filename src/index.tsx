@@ -8,21 +8,40 @@ import React, {
   useCallback,
 } from 'react';
 import PropTypes from 'prop-types';
-import lottie from 'lottie-web';
+import lottie, {
+  AnimationItem,
+  AnimationEventName,
+  AnimationEventCallback,
+  AnimationDirection,
+  AnimationConfigWithPath,
+  AnimationConfigWithData,
+  AnimationSegment,
+} from 'lottie-web';
 
-const registerEvents = (anim, eventListeners) => {
+type AnimationConfigOptionalWithPath = AnimationConfigWithPath & {
+  animationData?: undefined;
+}
+
+type AnimationConfig = AnimationConfigOptionalWithPath | AnimationConfigWithData
+
+interface AnimEventListener {
+  eventName: AnimationEventName;
+  callback: AnimationEventCallback;
+}
+
+const registerEvents = (anim: AnimationItem, eventListeners: AnimEventListener[]): void => {
   eventListeners.forEach((eventListener) => {
     anim.addEventListener(eventListener.eventName, eventListener.callback);
   });
 };
 
-const deRegisterEvents = (anim, eventListeners) => {
+const deRegisterEvents = (anim: AnimationItem, eventListeners: AnimEventListener[]): void => {
   eventListeners.forEach((eventListener) => {
     anim.removeEventListener(eventListener.eventName, eventListener.callback);
   });
 };
 
-const getSize = (initial) => {
+const getSize = (initial: number | string | undefined): string => {
   let size;
 
   if (typeof initial === 'number') {
@@ -34,7 +53,30 @@ const getSize = (initial) => {
   return size;
 };
 
-const Lottie = ({
+interface LottieProps {
+  options: AnimationConfig;
+  eventListeners?: AnimEventListener[];
+  isStopped?: boolean;
+  isPaused?: boolean;
+  segments?: AnimationSegment[];
+  speed?: number;
+  direction?: AnimationDirection;
+  width?: number | string;
+  height?: number | string;
+  style?: React.CSSProperties;
+  isClickToPauseDisabled?: boolean;
+  title?: string;
+  ariaRole?: string;
+  ariaLabel?: string;
+}
+
+interface LottieReferences {
+  element?: HTMLDivElement;
+  anim?: AnimationItem;
+  options?: AnimationConfig;
+}
+
+const Lottie: React.FunctionComponent<LottieProps> = ({
   options,
   eventListeners,
   isStopped,
@@ -50,22 +92,20 @@ const Lottie = ({
   ariaRole,
   ariaLabel,
 }) => {
-  const references = useRef({
+  const references = useRef<LottieReferences>({
     element: undefined,
     options: undefined,
     anim: undefined,
   });
 
   const pause = useCallback(() => {
-    const { anim } = references.current.anim;
+    const { anim } = references.current;
 
     if (!anim) {
       return;
     }
 
-    if (isPaused && !anim.isPaused) {
-      anim.pause();
-    } else if (!isPaused && anim.isPaused) {
+    if (isPaused) {
       anim.pause();
     }
   }, [isPaused]);
@@ -79,12 +119,12 @@ const Lottie = ({
       return;
     }
 
-    if (anim.isPaused) {
+    if (isPaused) {
       anim.play();
     } else {
       anim.pause();
     }
-  }, [isClickToPauseDisabled]);
+  }, [isClickToPauseDisabled, isPaused]);
 
   useEffect(() => {
     const {
@@ -92,7 +132,6 @@ const Lottie = ({
       autoplay,
       animationData,
       rendererSettings,
-      optionSegments,
     } = options;
 
     if (!references.current.options) {
@@ -101,7 +140,6 @@ const Lottie = ({
         renderer: 'svg',
         loop: loop !== false,
         autoplay: autoplay !== false,
-        segments: optionSegments !== false,
         animationData,
         rendererSettings,
         ...options,
@@ -114,14 +152,20 @@ const Lottie = ({
     }
 
     const anim = lottie.loadAnimation(references.current.options);
-    registerEvents(anim, eventListeners);
+    if (eventListeners) {
+      registerEvents(anim, eventListeners);
+    }
     references.current.anim = anim;
 
-    return () => {
-      deRegisterEvents(anim, eventListeners);
+    return (): void => {
+      if (eventListeners) {
+        deRegisterEvents(anim, eventListeners);
+      }
       anim.destroy();
-      references.current.options.animationData = null;
-      references.current.anim = null;
+      if (references.current.options) {
+        references.current.options.animationData = undefined;
+      }
+      references.current.anim = undefined;
     };
   }, [eventListeners, options]);
 
@@ -139,8 +183,12 @@ const Lottie = ({
     }
 
     pause();
-    anim.setSpeed(speed);
-    anim.setDirection(direction);
+    if (speed) {
+      anim.setSpeed(speed);
+    }
+    if (direction) {
+      anim.setDirection(direction);
+    }
   }, [isStopped, segments, pause, speed, direction]);
 
   const lottieStyles = useMemo(() => ({
@@ -150,7 +198,7 @@ const Lottie = ({
     margin: '0 auto',
     outline: 'none',
     ...style,
-  }));
+  }), [style]);
 
   const handleReferenceAssignation = useCallback((newReference) => {
     references.current.element = newReference;
@@ -164,21 +212,27 @@ const Lottie = ({
       title={title}
       role={ariaRole}
       aria-label={ariaLabel}
-      tabIndex="0"
+      tabIndex={0}
     />
   );
 };
 
 Lottie.propTypes = {
   eventListeners: PropTypes.arrayOf(PropTypes.object),
-  options: PropTypes.object.isRequired,
+  options: PropTypes.shape({
+    loop: PropTypes.bool,
+    autoplay: PropTypes.bool,
+    optionSegments: PropTypes.bool,
+    animationData: PropTypes.shape(),
+    rendererSettings: PropTypes.shape(),
+  }).isRequired,
   height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   isStopped: PropTypes.bool,
   isPaused: PropTypes.bool,
   speed: PropTypes.number,
   segments: PropTypes.arrayOf(PropTypes.number),
-  direction: PropTypes.number,
+  direction: PropTypes.oneOf([1, -1]),
   ariaRole: PropTypes.string,
   ariaLabel: PropTypes.string,
   isClickToPauseDisabled: PropTypes.bool,
@@ -190,8 +244,8 @@ Lottie.defaultProps = {
   height: undefined,
   width: undefined,
   segments: [],
-  direction: undefined,
-  eventListeners: [],
+  direction: 1,
+  eventListeners: undefined,
   style: {},
   isStopped: false,
   isPaused: false,
