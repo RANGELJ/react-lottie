@@ -13,16 +13,23 @@ import lottie, {
   AnimationEventName,
   AnimationEventCallback,
   AnimationDirection,
+  SVGRendererConfig,
+  CanvasRendererConfig,
+  HTMLRendererConfig,
+  AnimationSegment,
   AnimationConfigWithPath,
   AnimationConfigWithData,
-  AnimationSegment,
 } from 'lottie-web';
 
-type AnimationConfigOptionalWithPath = AnimationConfigWithPath & {
-  animationData?: undefined;
+type AnimationConfigProp = {
+  renderer?: 'svg' | 'canvas' | 'html';
+  loop?: boolean | number;
+  autoplay?: boolean;
+  name?: string;
+  assetsPath?: string;
+  animationData?: any; // eslint-disable-line
+  rendererSettings?: SVGRendererConfig | CanvasRendererConfig | HTMLRendererConfig;
 }
-
-type AnimationConfig = AnimationConfigOptionalWithPath | AnimationConfigWithData
 
 interface AnimEventListener {
   eventName: AnimationEventName;
@@ -54,7 +61,7 @@ const getSize = (initial: number | string | undefined): string => {
 };
 
 interface LottieProps {
-  options: AnimationConfig;
+  options: AnimationConfigProp;
   eventListeners?: AnimEventListener[];
   isStopped?: boolean;
   isPaused?: boolean;
@@ -73,7 +80,9 @@ interface LottieProps {
 interface LottieReferences {
   element?: HTMLDivElement;
   anim?: AnimationItem;
-  options?: AnimationConfig;
+  options?: (AnimationConfigWithPath | AnimationConfigWithData) & {
+    animationData?: any; // eslint-disable-line
+  };
 }
 
 const Lottie: React.FunctionComponent<LottieProps> = ({
@@ -133,6 +142,12 @@ const Lottie: React.FunctionComponent<LottieProps> = ({
       animationData,
       rendererSettings,
     } = options;
+
+    if (!references.current.element) {
+      return (): void => {
+        // nothing
+      };
+    }
 
     if (!references.current.options) {
       references.current.options = {
@@ -218,20 +233,65 @@ const Lottie: React.FunctionComponent<LottieProps> = ({
 };
 
 Lottie.propTypes = {
-  eventListeners: PropTypes.arrayOf(PropTypes.object),
+  eventListeners: PropTypes.arrayOf(PropTypes.shape({
+    eventName: PropTypes.oneOf<AnimationEventName>([
+      'enterFrame',
+      'loopComplete',
+      'complete',
+      'segmentStart',
+      'destroy',
+      'config_ready',
+      'data_ready',
+      'DOMLoaded',
+      'error',
+      'data_failed',
+      'loaded_images',
+    ]).isRequired,
+    callback: PropTypes.func.isRequired,
+  }).isRequired),
   options: PropTypes.shape({
     loop: PropTypes.bool,
     autoplay: PropTypes.bool,
     optionSegments: PropTypes.bool,
-    animationData: PropTypes.shape(),
-    rendererSettings: PropTypes.shape(),
+    animationData: PropTypes.any,
+    rendererSettings: PropTypes.oneOfType([
+      PropTypes.shape({
+        imagePreserveAspectRatio: PropTypes.string,
+        className: PropTypes.string,
+        title: PropTypes.string,
+        description: PropTypes.string,
+        preserveAspectRatio: PropTypes.string,
+        progressiveLoad: PropTypes.bool,
+        hideOnTransparent: PropTypes.bool,
+        viewBoxOnly: PropTypes.bool,
+        viewBoxSize: PropTypes.string,
+        focusable: PropTypes.bool,
+      }),
+      PropTypes.shape({
+        imagePreserveAspectRatio: PropTypes.string,
+        className: PropTypes.string,
+        clearCanvas: PropTypes.bool,
+        context: PropTypes.any,
+        progressiveLoad: PropTypes.bool,
+        preserveAspectRatio: PropTypes.string,
+      }),
+      PropTypes.shape({
+        imagePreserveAspectRatio: PropTypes.string,
+        className: PropTypes.string,
+        hideOnTransparent: PropTypes.bool,
+      }),
+    ]),
   }).isRequired,
   height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   isStopped: PropTypes.bool,
   isPaused: PropTypes.bool,
   speed: PropTypes.number,
-  segments: PropTypes.arrayOf(PropTypes.number),
+  segments: PropTypes.arrayOf<[number, number]>(
+    PropTypes.arrayOf(
+      PropTypes.number.isRequired,
+    ).isRequired as PropTypes.Validator<[number, number]>,
+  ),
   direction: PropTypes.oneOf([1, -1]),
   ariaRole: PropTypes.string,
   ariaLabel: PropTypes.string,
