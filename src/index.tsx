@@ -315,3 +315,5 @@ Lottie.defaultProps = {
   isClickToPauseDisabled: false,
   title: '',
 };
+
+export default Lottie;
