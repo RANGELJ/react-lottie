@@ -19,7 +19,8 @@ export default class TransitionWithOptions extends React.Component {
   }
 
   clickHandler = () => {
-    this.setState({ showLoopedAnimation: !this.state.showLoopedAnimation });
+    const { showLoopedAnimation } = this.state;
+    this.setState({ showLoopedAnimation: !showLoopedAnimation });
   };
 
   render() {
@@ -49,7 +50,7 @@ export default class TransitionWithOptions extends React.Component {
           This animation is
           {showLoopedAnimation ? 'looped' : 'not looped'}
         </p>
-        <button style={centerStyle} onClick={this.clickHandler}>
+        <button type="button" style={centerStyle} onClick={this.clickHandler}>
           switch
         </button>
       </div>

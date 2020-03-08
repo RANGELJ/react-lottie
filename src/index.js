@@ -1,178 +1,173 @@
-import React from 'react';
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable jsx-a11y/no-static-element-interactions */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex */
+import React, {
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from 'react';
 import PropTypes from 'prop-types';
 import lottie from 'lottie-web';
 
-export default class Lottie extends React.Component {
-  componentDidMount() {
-    const {
-      options,
-      eventListeners,
-    } = this.props;
+const registerEvents = (anim, eventListeners) => {
+  eventListeners.forEach((eventListener) => {
+    anim.addEventListener(eventListener.eventName, eventListener.callback);
+  });
+};
 
+const deRegisterEvents = (anim, eventListeners) => {
+  eventListeners.forEach((eventListener) => {
+    anim.removeEventListener(eventListener.eventName, eventListener.callback);
+  });
+};
+
+const getSize = (initial) => {
+  let size;
+
+  if (typeof initial === 'number') {
+    size = `${initial}px`;
+  } else {
+    size = initial || '100%';
+  }
+
+  return size;
+};
+
+const Lottie = ({
+  options,
+  eventListeners,
+  isStopped,
+  isPaused,
+  segments,
+  speed,
+  direction,
+  width,
+  height,
+  style,
+  isClickToPauseDisabled,
+  title,
+  ariaRole,
+  ariaLabel,
+}) => {
+  const references = useRef({
+    element: undefined,
+    options: undefined,
+    anim: undefined,
+  });
+
+  const pause = useCallback(() => {
+    const { anim } = references.current.anim;
+
+    if (!anim) {
+      return;
+    }
+
+    if (isPaused && !anim.isPaused) {
+      anim.pause();
+    } else if (!isPaused && anim.isPaused) {
+      anim.pause();
+    }
+  }, [isPaused]);
+
+  const handleClickToPause = useCallback(() => {
+    // The pause() method is for handling pausing by passing a prop isPaused
+    // This method is for handling the ability to pause by clicking on the animation
+    const { anim } = references.current;
+
+    if (!anim || !isClickToPauseDisabled) {
+      return;
+    }
+
+    if (anim.isPaused) {
+      anim.play();
+    } else {
+      anim.pause();
+    }
+  }, [isClickToPauseDisabled]);
+
+  useEffect(() => {
     const {
       loop,
       autoplay,
       animationData,
       rendererSettings,
-      segments,
+      optionSegments,
     } = options;
 
-    this.options = {
-      container: this.el,
-      renderer: 'svg',
-      loop: loop !== false,
-      autoplay: autoplay !== false,
-      segments: segments !== false,
-      animationData,
-      rendererSettings,
-    };
-
-    this.options = { ...this.options, ...options };
-
-    this.anim = lottie.loadAnimation(this.options);
-    this.registerEvents(eventListeners);
-  }
-
-  componentWillUpdate(nextProps /* , nextState */) {
-    const { eventListeners } = this.props;
-    /* Recreate the animation handle if the data is changed */
-    if (this.options.animationData !== nextProps.options.animationData) {
-      this.deRegisterEvents(eventListeners);
-      this.destroy();
-      this.options = { ...this.options, ...nextProps.options };
-      this.anim = lottie.loadAnimation(this.options);
-      this.registerEvents(nextProps.eventListeners);
+    if (!references.current.options) {
+      references.current.options = {
+        container: references.current.element,
+        renderer: 'svg',
+        loop: loop !== false,
+        autoplay: autoplay !== false,
+        segments: optionSegments !== false,
+        animationData,
+        rendererSettings,
+        ...options,
+      };
+    } else {
+      references.current.options = {
+        ...references.current.options,
+        ...options,
+      };
     }
-  }
 
-  componentDidUpdate() {
-    const { isStopped, segments } = this.props;
+    const anim = lottie.loadAnimation(references.current.options);
+    registerEvents(anim, eventListeners);
+    references.current.anim = anim;
+
+    return () => {
+      deRegisterEvents(anim, eventListeners);
+      anim.destroy();
+      references.current.options.animationData = null;
+      references.current.anim = null;
+    };
+  }, [eventListeners, options]);
+
+  useEffect(() => {
+    if (!references.current.anim) {
+      return;
+    }
+    const { anim } = references.current;
     if (isStopped) {
-      this.stop();
+      anim.stop();
     } else if (segments) {
-      this.playSegments();
+      anim.playSegments(segments);
     } else {
-      this.play();
+      anim.play();
     }
 
-    this.pause();
-    this.setSpeed();
-    this.setDirection();
-  }
+    pause();
+    anim.setSpeed(speed);
+    anim.setDirection(direction);
+  }, [isStopped, segments, pause, speed, direction]);
 
-  componentWillUnmount() {
-    const { eventListeners } = this.props;
-    this.deRegisterEvents(eventListeners);
-    this.destroy();
-    this.options.animationData = null;
-    this.anim = null;
-  }
+  const lottieStyles = useMemo(() => ({
+    width: getSize(width),
+    height: getSize(height),
+    overflow: 'hidden',
+    margin: '0 auto',
+    outline: 'none',
+    ...style,
+  }));
 
-  setSpeed() {
-    const { speed } = this.props;
-    this.anim.setSpeed(speed);
-  }
+  const handleReferenceAssignation = useCallback((newReference) => {
+    references.current.element = newReference;
+  }, []);
 
-  setDirection() {
-    this.anim.setDirection(this.props.direction);
-  }
-
-  play() {
-    this.anim.play();
-  }
-
-  playSegments() {
-    this.anim.playSegments(this.props.segments);
-  }
-
-  stop() {
-    this.anim.stop();
-  }
-
-  pause() {
-    if (this.props.isPaused && !this.anim.isPaused) {
-      this.anim.pause();
-    } else if (!this.props.isPaused && this.anim.isPaused) {
-      this.anim.pause();
-    }
-  }
-
-  destroy() {
-    this.anim.destroy();
-  }
-
-  registerEvents(eventListeners) {
-    eventListeners.forEach((eventListener) => {
-      this.anim.addEventListener(eventListener.eventName, eventListener.callback);
-    });
-  }
-
-  deRegisterEvents(eventListeners) {
-    eventListeners.forEach((eventListener) => {
-      this.anim.removeEventListener(eventListener.eventName, eventListener.callback);
-    });
-  }
-
-  handleClickToPause = () => {
-    // The pause() method is for handling pausing by passing a prop isPaused
-    // This method is for handling the ability to pause by clicking on the animation
-    if (this.anim.isPaused) {
-      this.anim.play();
-    } else {
-      this.anim.pause();
-    }
-  }
-
-  render() {
-    const {
-      width,
-      height,
-      ariaRole,
-      ariaLabel,
-      isClickToPauseDisabled,
-      title,
-    } = this.props;
-
-    const getSize = (initial) => {
-      let size;
-
-      if (typeof initial === 'number') {
-        size = `${initial}px`;
-      } else {
-        size = initial || '100%';
-      }
-
-      return size;
-    };
-
-    const lottieStyles = {
-      width: getSize(width),
-      height: getSize(height),
-      overflow: 'hidden',
-      margin: '0 auto',
-      outline: 'none',
-      ...this.props.style,
-    };
-
-    const onClickHandler = isClickToPauseDisabled ? () => null : this.handleClickToPause;
-
-    return (
-      // Bug with eslint rules https://github.com/airbnb/javascript/issues/1374
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-      <div
-        ref={(c) => {
-          this.el = c;
-        }}
-        style={lottieStyles}
-        onClick={onClickHandler}
-        title={title}
-        role={ariaRole}
-        aria-label={ariaLabel}
-        tabIndex="0"
-      />
-    );
-  }
-}
+  return (
+    <div
+      ref={handleReferenceAssignation}
+      style={lottieStyles}
+      onClick={handleClickToPause}
+      title={title}
+      role={ariaRole}
+      aria-label={ariaLabel}
+      tabIndex="0"
+    />
+  );
+};
 
 Lottie.propTypes = {
   eventListeners: PropTypes.arrayOf(PropTypes.object),
@@ -188,11 +183,16 @@ Lottie.propTypes = {
   ariaLabel: PropTypes.string,
   isClickToPauseDisabled: PropTypes.bool,
   title: PropTypes.string,
-  style: PropTypes.string,
+  style: PropTypes.shape({}),
 };
 
 Lottie.defaultProps = {
+  height: undefined,
+  width: undefined,
+  segments: [],
+  direction: undefined,
   eventListeners: [],
+  style: {},
   isStopped: false,
   isPaused: false,
   speed: 1,
