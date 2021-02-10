@@ -7,7 +7,6 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
-import PropTypes from 'prop-types';
 import lottie, {
   AnimationItem,
   AnimationEventName,
@@ -31,12 +30,15 @@ type AnimationConfigProp = {
   rendererSettings?: SVGRendererConfig | CanvasRendererConfig | HTMLRendererConfig;
 }
 
-interface AnimEventListener {
+type AnimEventListener = {
   eventName: AnimationEventName;
   callback: AnimationEventCallback;
 }
 
-const registerEvents = (anim: AnimationItem, eventListeners: AnimEventListener[]): void => {
+const registerEvents = (
+  anim: AnimationItem,
+  eventListeners: AnimEventListener[],
+): void => {
   eventListeners.forEach((eventListener) => {
     anim.addEventListener(eventListener.eventName, eventListener.callback);
   });
@@ -230,74 +232,6 @@ const Lottie: React.FunctionComponent<LottieProps> = ({
       tabIndex={0}
     />
   );
-};
-
-Lottie.propTypes = {
-  eventListeners: PropTypes.arrayOf(PropTypes.shape({
-    eventName: PropTypes.oneOf<AnimationEventName>([
-      'enterFrame',
-      'loopComplete',
-      'complete',
-      'segmentStart',
-      'destroy',
-      'config_ready',
-      'data_ready',
-      'DOMLoaded',
-      'error',
-      'data_failed',
-      'loaded_images',
-    ]).isRequired,
-    callback: PropTypes.func.isRequired,
-  }).isRequired),
-  options: PropTypes.shape({
-    loop: PropTypes.bool,
-    autoplay: PropTypes.bool,
-    optionSegments: PropTypes.bool,
-    animationData: PropTypes.any,
-    rendererSettings: PropTypes.oneOfType([
-      PropTypes.shape({
-        imagePreserveAspectRatio: PropTypes.string,
-        className: PropTypes.string,
-        title: PropTypes.string,
-        description: PropTypes.string,
-        preserveAspectRatio: PropTypes.string,
-        progressiveLoad: PropTypes.bool,
-        hideOnTransparent: PropTypes.bool,
-        viewBoxOnly: PropTypes.bool,
-        viewBoxSize: PropTypes.string,
-        focusable: PropTypes.bool,
-      }),
-      PropTypes.shape({
-        imagePreserveAspectRatio: PropTypes.string,
-        className: PropTypes.string,
-        clearCanvas: PropTypes.bool,
-        context: PropTypes.any,
-        progressiveLoad: PropTypes.bool,
-        preserveAspectRatio: PropTypes.string,
-      }),
-      PropTypes.shape({
-        imagePreserveAspectRatio: PropTypes.string,
-        className: PropTypes.string,
-        hideOnTransparent: PropTypes.bool,
-      }),
-    ]),
-  }).isRequired,
-  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  isStopped: PropTypes.bool,
-  isPaused: PropTypes.bool,
-  speed: PropTypes.number,
-  segments: PropTypes.arrayOf<[number, number]>(
-    PropTypes.arrayOf(
-      PropTypes.number.isRequired,
-    ).isRequired as PropTypes.Validator<[number, number]>,
-  ),
-  direction: PropTypes.oneOf([1, -1]),
-  ariaRole: PropTypes.string,
-  ariaLabel: PropTypes.string,
-  isClickToPauseDisabled: PropTypes.bool,
-  title: PropTypes.string,
-  style: PropTypes.shape({}),
 };
 
 Lottie.defaultProps = {
